@@ -192,9 +192,113 @@ namespace LMS.Areas.Identity.Pages.Account
         /// <param name="departmentAbbrev">The department abbreviation that the user belongs to (ignore for Admins) </param>
         /// <param name="role">The user's role: one of "Administrator", "Professor", "Student"</param>
         /// <returns>The uID of the new user</returns>
-        string CreateNewUser( string firstName, string lastName, DateTime DOB, string departmentAbbrev, string role )
+         string CreateNewUser( string firstName, string lastName, DateTime DOB, string departmentAbbrev, string role )
         {
-            return "unknown";
+
+            var maxUIDAdministrators = (from ad in db.Administrators
+                                        select ad.UId).Max();
+
+            var maxUIDProfessors = (from ad in db.Professors
+                                              select ad.UId).Max();
+
+            var maxUIDStudents = (from ad in db.Students
+                                            select ad.UId).Max();
+
+
+            int? maxUID = null;
+
+            if (maxUIDAdministrators != null)
+                maxUID = int.Parse(maxUIDAdministrators.Substring(1));
+            else if (maxUIDProfessors != null )
+            {
+                int num = int.Parse(maxUIDProfessors.Substring(1));
+                if (maxUID!=null && num > maxUID || maxUID is null)
+                {
+                    maxUID = num;
+                }
+              
+            }
+
+            else if (maxUIDStudents != null)
+            {
+                int num = int.Parse(maxUIDStudents.Substring(1));
+                if (maxUID != null && num > maxUID || maxUID is null)
+                {
+                    maxUID = num;
+                }
+            }
+            string nextUID = "";
+            if (maxUID is null)
+            {
+                nextUID = "u0000000";
+
+            }
+            else
+            {
+                int nextMax = (int)maxUID + 1;
+
+                nextUID = "u" + nextMax.ToString().PadLeft(7, '0');
+            }
+           
+
+
+            if (role.Equals("Student"))
+            {
+                try
+                {
+                    Student st = new Student();
+                    st.FName = firstName;
+                    st.LName = lastName;
+                    st.Dob = DateOnly.FromDateTime(DOB);
+                    st.Subject = departmentAbbrev;
+                    st.UId = nextUID;
+
+                    db.Students.Add(st);
+                    db.SaveChanges();
+
+                }
+                catch (Exception ex) 
+                {
+                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                }
+            }
+            if (role.Equals("Professor"))
+            {
+                try
+                {
+                    Professor pf = new Professor();
+                    pf.FName = firstName;
+                    pf.LName = lastName;
+                    pf.Dob = DateOnly.FromDateTime(DOB);
+                    pf.Subject = departmentAbbrev;
+                    pf.UId = nextUID;
+                    db.Professors.Add(pf);
+                    db.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                }
+            }
+            else
+            {
+                try
+                {
+                    Administrator ad = new Administrator();
+                    ad.FName = firstName;
+                    ad.LName = lastName;
+                    ad.Dob = DateOnly.FromDateTime(DOB);
+                    ad.UId = nextUID;
+                   
+                    db.Administrators.Add(ad);
+                    db.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                }
+            }
+            return nextUID;
         }
 
         /*******End code to modify********/
