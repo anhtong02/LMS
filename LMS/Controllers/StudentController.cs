@@ -75,8 +75,24 @@ namespace LMS.Controllers
         /// <param name="uid">The uid of the student</param>
         /// <returns>The JSON array</returns>
         public IActionResult GetMyClasses(string uid)
-        {           
-            return Json(null);
+        {
+            var query = from cl in db.Classes
+                        join en in db.Enrolleds on cl.ClassId equals en.ClassId into e
+                        from j1 in e.DefaultIfEmpty()
+                        where j1.UId == uid
+
+                        select new
+                        {
+                            subject = cl.CIdNavigation.Subject,
+                            number = cl.CIdNavigation.Number,
+                            name = cl.CIdNavigation.Name,
+                            season = cl.SemSeason,
+                            year = cl.SemYear,
+                            grade = j1 == null ? "--" : (string?)j1.Grade
+
+                        };
+                    
+            return Json(query.ToArray());
         }
 
         /// <summary>
@@ -94,8 +110,32 @@ namespace LMS.Controllers
         /// <param name="uid"></param>
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentsInClass(string subject, int num, string season, int year, string uid)
-        {            
-            return Json(null);
+        {
+            var query1 = from a in db.Assignments
+                         join cl in db.Classes on a.Ac.ClassId equals cl.ClassId into acl
+                         from j1 in acl
+                         where j1.CIdNavigation.Subject == subject && j1.CIdNavigation.Number == num &&
+                         j1.SemSeason == season && j1.SemYear == year
+                         select new
+                         {
+                             AssignName = a.Name,
+                             Categoryname = a.Ac.Name,
+                             aID = a.AId,
+                             AssignDue = a.Due
+                         };
+
+            var query2 = from q in query1
+                         join s in db.Submissions on new { A = q.aID, B = uid } equals new { A = s.AId, B = s.UId } into joined
+                         from j in joined.DefaultIfEmpty()
+                         select new
+                         {
+                             aname = q.AssignName,
+                             cname = q.Categoryname,
+                             due = q.AssignDue,
+                             score = j == null ? null : (uint?)j.Score
+                         };
+                    
+            return Json(query2.ToArray());
         }
 
 
