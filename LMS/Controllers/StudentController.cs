@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -180,20 +181,27 @@ namespace LMS.Controllers
                          where j2.Name == asgname
                          select new
                          {
-                             asg_name = j2.Name
+                             aid = j2.AId,
                          };
             var query3 = from s in db.Submissions
                          where s.UId == uid && s.AIdNavigation.Name == asgname
                          select s;
-            if (query2 != null)
+            if (query2.Count() > 0)
             {
                 try
                 {
+                    if (query3.Count() > 0)
+                        db.Submissions.RemoveRange(query3);
+
                     Submission submission = new Submission();
                     submission.Time = DateTime.Now;
                     submission.Score = 0;
                     submission.UId = uid;
                     submission.Contents = contents;
+                    submission.AId = query2.FirstOrDefault().aid;
+                   
+
+
                     db.Submissions.Add(submission);
                     db.SaveChanges();
 
@@ -203,27 +211,7 @@ namespace LMS.Controllers
                     return Json(new { success = false });
                 }
             }
-            else if (query3 != null)
-            {
-                try
-                {
-                    db.Submissions.RemoveRange(query3);
-                    db.SaveChanges() ;
-
-                    Submission submission = new Submission();
-                    submission.Time = DateTime.Now;
-                    submission.Score = 0;
-                    submission.UId = uid;
-                    submission.Contents = contents;
-                    db.Submissions.Add(submission);
-                    db.SaveChanges();
-                }
-                catch
-                {
-                    return Json( new { success = false });
-                }
-                
-            }
+           
             
             return Json(new { success = true });
         }
@@ -240,7 +228,23 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing {success = {true/false}. 
         /// false if the student is already enrolled in the class, true otherwise.</returns>
         public IActionResult Enroll(string subject, int num, string season, int year, string uid)
-        {          
+        {
+            var query = from e in db.Classes
+                        where e.CIdNavigation.Subject == subject && e.CIdNavigation.Number == num && e.SemSeason == season && e.SemYear == year
+                        select new { e.ClassId };
+            var query1 = from q in query
+                         join en in db.Enrolleds on new { A = q.ClassId, B = uid } equals new { A = en.ClassId, B = en.UId } into q1
+                         select q1;
+            if (query1.Count() == 0) 
+            {
+                
+                Enrolled enroll = new Enrolled();
+                enroll.UId = uid;
+                enroll.ClassId = query.SingleOrDefault().ClassId;
+                db.Enrolleds.Add(enroll);
+                db.SaveChanges();
+
+            }
             return Json(new { success = false});
         }
 
