@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -167,8 +168,56 @@ namespace LMS.Controllers
         /// a Class offering of the same Course in the same Semester,
         /// true otherwise.</returns>
         public IActionResult CreateClass(string subject, int number, string season, int year, DateTime start, DateTime end, string location, string instructor)
-        {            
+        {
+            System.Diagnostics.Debug.WriteLine("start to create classs");
             
+            var query1 = from c in db.Classes
+                         where (c.SemSeason == season && c.SemYear == year) && 
+                         (
+                         (c.Loc == location && 
+                         start.Hour == c.Start.Hour && start.Minute>=c.Start.Minute & end.Hour == c.End.Hour && end.Minute <=c.End.Minute) 
+                         ||                       
+                         (c.CIdNavigation.Subject == subject && c.CIdNavigation.Number == number)
+                         )
+                         select c;
+            System.Diagnostics.Debug.WriteLine("query: ", Json(query1.ToArray()));
+
+            if (query1 == null | query1.Count()==0)
+            {
+                try
+                {
+                    Class cls = new Class();
+                    cls.SemSeason = season;
+                    cls.SemYear = (uint)year;
+                    cls.Loc = location;
+                    cls.UId = instructor;
+
+                    var query2 = from c in db.Courses
+                                 where c.Subject == subject && c.Number == number
+                                 select c.CId;
+                    if (query2 == null)
+                        return Json(new { success = false });
+                    else 
+                        cls.CId =(uint) query2.SingleOrDefault();
+                    cls.Start = TimeOnly.FromDateTime(start);
+                    cls.End = TimeOnly.FromDateTime(end);
+                    db.Classes.Add(cls);
+                    db.SaveChanges();
+                }
+                catch
+                {
+                    System.Diagnostics.Debug.WriteLine("fail to create class");
+
+                    return Json(new { success = false });
+                }
+
+                System.Diagnostics.Debug.WriteLine("succesfully created");
+
+                return Json(new { success = true });
+
+            }
+            System.Diagnostics.Debug.WriteLine("unable to create class");
+
             return Json(new { success = false});
         }
 
