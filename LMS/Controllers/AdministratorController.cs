@@ -78,8 +78,16 @@ namespace LMS.Controllers
         /// <returns>The JSON result</returns>
         public IActionResult GetCourses(string subject)
         {
-            
-            return Json(null);
+            var query = from d in db.Departments
+                        join c in db.Courses on d.Subject equals c.Subject into co
+                        from j1 in co
+                        where j1.Subject == subject
+                        select new
+                        {
+                            number = j1.Number,
+                            name = j1.Name
+                        };
+            return Json(query.ToArray());
         }
 
         /// <summary>
@@ -93,8 +101,17 @@ namespace LMS.Controllers
         /// <returns>The JSON result</returns>
         public IActionResult GetProfessors(string subject)
         {
-            
-            return Json(null);
+            var query = from d in db.Departments
+                        join p in db.Professors on d.Subject equals p.Subject into prof
+                        from j1 in prof
+                        where j1.Subject == subject
+                        select new
+                        {
+                            lname = j1.LName,
+                            fname = j1.FName,
+                            uid = j1.UId
+                        };
+            return Json(query.ToArray());
             
         }
 
@@ -110,8 +127,25 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing {success = true/false}.
         /// false if the course already exists, true otherwise.</returns>
         public IActionResult CreateCourse(string subject, int number, string name)
-        {           
-            return Json(new { success = false });
+        {
+            
+                try
+                {
+                    Course course = new Course();
+                    course.Subject = subject;
+                    course.Number = (ushort)number;
+                    course.Name = name;
+                    db.Courses.Add(course);
+                    db.SaveChanges();
+
+                }
+                catch
+                {
+                    return Json(new { success = false });
+                }
+            
+            
+            return Json(new { success = true });
         }
 
 
@@ -134,6 +168,7 @@ namespace LMS.Controllers
         /// true otherwise.</returns>
         public IActionResult CreateClass(string subject, int number, string season, int year, DateTime start, DateTime end, string location, string instructor)
         {            
+            
             return Json(new { success = false});
         }
 

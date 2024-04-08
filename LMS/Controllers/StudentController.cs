@@ -159,8 +159,73 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing {success = true/false}</returns>
         public IActionResult SubmitAssignmentText(string subject, int num, string season, int year,
           string category, string asgname, string uid, string contents)
-        {           
-            return Json(new { success = false });
+        {
+            var query1 = from co in db.Classes
+                         join a in db.AssignmentCategories on co.ClassId equals a.ClassId into coa
+                         from j1 in coa
+                         where co.CIdNavigation.Subject == subject && co.CIdNavigation.Number == num &&
+                         co.SemSeason == season && co.SemYear == year && j1.Name == category
+                         select new
+                         {
+                             course_subject = co.CIdNavigation.Subject,
+                             course_num = co.CIdNavigation.Number,
+                             cls_season = co.SemSeason,
+                             cls_year = co.SemYear,
+                             a_category = j1.Name,
+                             acid = j1.AcId
+                         };
+            var query2 = from q in query1
+                         join aa in db.Assignments on q.acid equals aa.AcId into aaq
+                         from j2 in aaq
+                         where j2.Name == asgname
+                         select new
+                         {
+                             asg_name = j2.Name
+                         };
+            var query3 = from s in db.Submissions
+                         where s.UId == uid && s.AIdNavigation.Name == asgname
+                         select s;
+            if (query2 != null)
+            {
+                try
+                {
+                    Submission submission = new Submission();
+                    submission.Time = DateTime.Now;
+                    submission.Score = 0;
+                    submission.UId = uid;
+                    submission.Contents = contents;
+                    db.Submissions.Add(submission);
+                    db.SaveChanges();
+
+                }
+                catch 
+                {
+                    return Json(new { success = false });
+                }
+            }
+            else if (query3 != null)
+            {
+                try
+                {
+                    db.Submissions.RemoveRange(query3);
+                    db.SaveChanges() ;
+
+                    Submission submission = new Submission();
+                    submission.Time = DateTime.Now;
+                    submission.Score = 0;
+                    submission.UId = uid;
+                    submission.Contents = contents;
+                    db.Submissions.Add(submission);
+                    db.SaveChanges();
+                }
+                catch
+                {
+                    return Json( new { success = false });
+                }
+                
+            }
+            
+            return Json(new { success = true });
         }
 
 
