@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using static System.Formats.Asn1.AsnWriter;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -317,11 +320,38 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult CreateAssignment(string subject, int num, string season, int year, string category, string asgname, int asgpoints, DateTime asgdue, string asgcontents)
         {
-             
-            var query = from C in db.Assignments
 
-            return Json(new { success = false });
+            var query = from C in db.AssignmentCategories
+                        where C.Name == category &
+                        C.Class.SemSeason == season
+                        &
+                        C.Class.SemYear == year
+                        &
+                        C.Class.CIdNavigation.Subject == subject
+                        & C.Class.CIdNavigation.Number == num
+                        select new { AcId = C.AcId };
+
+            //check if assignments already there
+            if (query.Count() == 0) {
+                Assignment a = new Assignment
+                {
+                    Name = asgname,
+                    Points = (uint)asgpoints,
+                    Contents = asgcontents,
+                    Due = asgdue,
+                    AcId = (uint)query.FirstOrDefault().AcId
+                };
+                db.Assignments.Add(a);
+                db.SaveChanges();
+                return Json(new { success = true });
+            }
+            else
+            {
+                return Json(new { success = false });
+
+            }
         }
+           
 
 
         /// <summary>
@@ -343,7 +373,23 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetSubmissionsToAssignment(string subject, int num, string season, int year, string category, string asgname)
         {
-            return Json(null);
+            var query = from s in db.Submissions
+                        where s.AIdNavigation.Name == asgname &
+                        s.AIdNavigation.Ac.Name == category &
+                        s.AIdNavigation.Ac.Class.SemYear == year &
+                        s.AIdNavigation.Ac.Class.SemSeason == season &
+                        s.AIdNavigation.Ac.Class.CIdNavigation.Subject == subject &
+                        s.AIdNavigation.Ac.Class.CIdNavigation.Number == num 
+                        select new
+                        {
+                            fname   = s.UIdNavigation.FName,
+                            lname   = s.UIdNavigation.LName,
+                            uid     = s.UIdNavigation.UId,
+                            time    = s.Time,
+                            score   = s.Score
+                        };
+
+            return Json(query.ToArray());
         }
 
 
@@ -361,7 +407,26 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
         {
-            return Json(new { success = false });
+            try
+            {
+                var q = from s in db.Submissions
+                        where s.UId == uid &
+                              s.AIdNavigation.Name == asgname &
+                              s.AIdNavigation.Ac.Name == category &
+                              s.AIdNavigation.Ac.Class.SemYear == year &
+                              s.AIdNavigation.Ac.Class.SemSeason == season &
+                              s.AIdNavigation.Ac.Class.CIdNavigation.Subject == subject &
+                              s.AIdNavigation.Ac.Class.CIdNavigation.Number == num
+                        select s;
+
+                q.FirstOrDefault().Score = (uint)score;
+                return Json(new { success = true });
+            }
+            catch
+            {
+                return Json(new { success = false });
+
+            }
         }
 
 
