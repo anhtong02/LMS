@@ -118,7 +118,37 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetStudentsInClass(string subject, int num, string season, int year)
         {
-            return Json(null);
+            /* var query = from C in db.Classes
+                         where (C.SemSeason == season && C.SemYear == year) &&
+                               (C.CIdNavigation.Subject == subject && C.CIdNavigation.Number == num)
+                         select C.ClassId;
+
+             var query2 = from E in db.Enrolleds
+                          where query.Contains(E.ClassId)
+                          select new { fname = E.UIdNavigation.FName,
+                                       lname = E.UIdNavigation.LName,
+                                         uid = E.UIdNavigation.UId,
+                                         dob = E.UIdNavigation.Dob,
+                                       grade = E.Grade,
+                          };*/
+
+
+
+
+
+            var q = from C in db.Classes
+                    join E in db.Enrolleds on C.ClassId equals E.ClassId
+                    where (C.SemSeason == season && C.SemYear == year) &&
+                          (C.CIdNavigation.Subject == subject && C.CIdNavigation.Number == num)
+                    select new
+                    {
+                        fname = E.UIdNavigation.FName,
+                        lname = E.UIdNavigation.LName,
+                        uid = E.UIdNavigation.UId,
+                        dob = E.UIdNavigation.Dob,
+                        grade = E.Grade
+                    };
+            return Json(q.ToArray());
         }
 
 
@@ -141,7 +171,44 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentsInCategory(string subject, int num, string season, int year, string category)
         {
-            return Json(null);
+            var query = from C in db.Classes
+                        where (C.SemSeason == season && C.SemYear == year) &&
+                              (C.CIdNavigation.Subject == subject && C.CIdNavigation.Number == num)
+                        select C.ClassId;
+
+            IQueryable<object> assignmentsQuery;
+
+            if (category is null)
+            {
+                assignmentsQuery = from AC in db.AssignmentCategories
+                             join A in db.Assignments on AC.AcId equals A.AcId
+
+                             where query.Contains(AC.ClassId) && AC.Name == category
+                             select new
+                             {
+                                 aname = A.Name,
+                                 cname = AC.Name,
+                                 due = A.Due,
+                                 submissions = A.Submissions.Count()
+                             };
+            }
+            else
+            {
+                assignmentsQuery = from AC in db.AssignmentCategories
+                                   join A in db.Assignments on AC.AcId equals A.AcId
+
+                                   where query.Contains(AC.ClassId)
+                                   select new
+                                   {
+                                       aname = A.Name,
+                                       cname = AC.Name,
+                                       due = A.Due,
+                                       submissions = A.Submissions.Count()
+                                   };
+            }
+
+
+            return Json(assignmentsQuery.ToArray());
         }
 
 
@@ -159,7 +226,19 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentCategories(string subject, int num, string season, int year)
         {
-            return Json(null);
+            var query = from C in db.Classes
+                        join AC in db.AssignmentCategories on C.ClassId equals AC.ClassId
+                        where (C.SemSeason == season && C.SemYear == year) &&
+                              (C.CIdNavigation.Subject == subject && C.CIdNavigation.Number == num)
+                        select new
+                        {
+                            name = AC.Name,
+                            weight = AC.Weight
+                        };
+
+
+
+            return Json(query.ToArray());
         }
 
         /// <summary>
@@ -175,7 +254,52 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>A JSON object containing {success = true/false} </returns>
         public IActionResult CreateAssignmentCategory(string subject, int num, string season, int year, string category, int catweight)
         {
-            return Json(new { success = false });
+            //check if cat already exist in the class
+            var query = from AC in db.AssignmentCategories
+                        where (AC.Class.SemSeason==season && AC.Class.SemYear == year) &&
+                              (AC.Class.CIdNavigation.Subject == subject && AC.Class.CIdNavigation.Number == num) && AC.Name == category && AC.Weight == catweight
+                        select AC.ClassId;
+
+            if (query.Count() > 0 || query != null)
+            {
+                return Json(new { success = false });
+
+            }
+
+            //otherwise, get the classId:
+
+            var classIdQuery = from C in db.Classes
+                        where (C.SemSeason == season && C.SemYear == year) &&
+                              (C.CIdNavigation.Subject == subject && C.CIdNavigation.Number == num)
+                        select C.ClassId;
+
+            if (classIdQuery.Count() == 0) 
+            {
+                System.Diagnostics.Debug.WriteLine("unable to find class, located: CreateAssignmentCategory()");
+                return Json(new { success = false });
+            }
+
+            try
+            {
+                AssignmentCategory ac = new AssignmentCategory
+                {
+
+                    Name = category,
+                    Weight = (byte)catweight,
+                    ClassId = query.SingleOrDefault()
+                };
+                db.AssignmentCategories.Add(ac);
+                db.SaveChanges();
+
+                return Json(new { success = true });
+            }
+
+            catch (Exception ex)
+            {
+                return Json(new { success = false });
+
+            }
+
         }
 
         /// <summary>
@@ -193,6 +317,9 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult CreateAssignment(string subject, int num, string season, int year, string category, string asgname, int asgpoints, DateTime asgdue, string asgcontents)
         {
+             
+            var query = from C in db.Assignments
+
             return Json(new { success = false });
         }
 
@@ -250,8 +377,20 @@ namespace LMS_CustomIdentity.Controllers
         /// <param name="uid">The professor's uid</param>
         /// <returns>The JSON array</returns>
         public IActionResult GetMyClasses(string uid)
-        {            
-            return Json(null);
+        {
+            var query = from C in db.Classes
+                        where C.UId == uid
+                        select new
+                        {
+                            subject = C.CIdNavigation.Subject,
+                            number = C.CIdNavigation.Number,
+                            name = C.CIdNavigation.Name,
+                            season = C.SemSeason,
+                            year = C.SemYear
+
+                        };
+
+            return Json(query.ToArray());
         }
 
 
