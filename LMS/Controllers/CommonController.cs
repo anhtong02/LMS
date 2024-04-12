@@ -190,7 +190,7 @@ namespace LMS.Controllers
         /// </returns>
         public IActionResult GetUser(string uid)
         {
-            var query = from s in db.Students
+            var query1 = (from s in db.Students
                         where s.UId == uid
                         select new
                         {
@@ -198,15 +198,39 @@ namespace LMS.Controllers
                             lname = s.LName,
                             uid = s.UId,
                             department = s.SubjectNavigation.Name
-                        };
-            System.Diagnostics.Debug.WriteLine("query1 :", Json(query.ToArray()));
-            if (query.Count() > 0)
+                        }).FirstOrDefault();
+            var query2 = (from p in db.Professors
+                          where p.UId == uid
+                          select new
+                          {
+                              fname = p.FName,
+                              lname = p.LName,
+                              uid = p.UId,
+                              Department = p.SubjectNavigation.Name
+                          }).FirstOrDefault();
+            var query3 = (from a in db.Administrators
+                          where a.UId == uid
+                          select new
+                          {
+                              fname = a.FName,
+                              lname = a.LName,
+                              uid = a.UId
+                          }).FirstOrDefault();
+
+            System.Diagnostics.Debug.WriteLine("query1 :", Json(query1));
+            if (query1 != null)
             {
-                return Json(query);
+                return Json(query1);
+            }
+            else if (query2 != null)
+            {
+                return Json(query2);
+            }
+            else
+            {
+                return Json(query3);
             }
             
-            return Json(new { sucess = false });
-
         }
 
 

@@ -195,51 +195,14 @@ namespace LMS.Areas.Identity.Pages.Account
          string CreateNewUser( string firstName, string lastName, DateTime DOB, string departmentAbbrev, string role )
         {
 
-            var maxUIDAdministrators = (from ad in db.Administrators
-                                        select ad.UId).Max();
+            var maxUID = db.Administrators
+                .Select(ad => ad.UId)
+                .Union(db.Professors.Select(pr => pr.UId))
+                .Union(db.Students.Select(st => st.UId))
+                .Max();
 
-            var maxUIDProfessors = (from ad in db.Professors
-                                              select ad.UId).Max();
-
-            var maxUIDStudents = (from ad in db.Students
-                                            select ad.UId).Max();
-
-
-            int? maxUID = null;
-
-            if (maxUIDAdministrators != null)
-                maxUID = int.Parse(maxUIDAdministrators.Substring(1));
-            else if (maxUIDProfessors != null )
-            {
-                int num = int.Parse(maxUIDProfessors.Substring(1));
-                if (maxUID!=null && num > maxUID || maxUID is null)
-                {
-                    maxUID = num;
-                }
-              
-            }
-
-            else if (maxUIDStudents != null)
-            {
-                int num = int.Parse(maxUIDStudents.Substring(1));
-                if (maxUID != null && num > maxUID || maxUID is null)
-                {
-                    maxUID = num;
-                }
-            }
-            string nextUID = "";
-            if (maxUID is null)
-            {
-                nextUID = "u0000000";
-
-            }
-            else
-            {
-                int nextMax = (int)maxUID + 1;
-
-                nextUID = "u" + nextMax.ToString().PadLeft(7, '0');
-            }
-           
+            int nextMax = maxUID != null ? int.Parse(maxUID.Substring(1)) + 1 : 0;
+            string nextUID = "u" + nextMax.ToString().PadLeft(7, '0');
 
 
             if (role.Equals("Student"))
@@ -262,7 +225,7 @@ namespace LMS.Areas.Identity.Pages.Account
                     System.Diagnostics.Debug.WriteLine(ex.Message);
                 }
             }
-            if (role.Equals("Professor"))
+            else if (role.Equals("Professor"))
             {
                 try
                 {
