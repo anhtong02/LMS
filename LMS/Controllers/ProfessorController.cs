@@ -186,7 +186,7 @@ namespace LMS_CustomIdentity.Controllers
                 assignmentsQuery = from AC in db.AssignmentCategories
                              join A in db.Assignments on AC.AcId equals A.AcId
 
-                             where query.Contains(AC.ClassId) && AC.Name == category
+                             where query.Contains(AC.ClassId)
                              select new
                              {
                                  aname = A.Name,
@@ -200,7 +200,7 @@ namespace LMS_CustomIdentity.Controllers
                 assignmentsQuery = from AC in db.AssignmentCategories
                                    join A in db.Assignments on AC.AcId equals A.AcId
 
-                                   where query.Contains(AC.ClassId)
+                                   where query.Contains(AC.ClassId) && AC.Name == category
                                    select new
                                    {
                                        aname = A.Name,
@@ -331,7 +331,7 @@ namespace LMS_CustomIdentity.Controllers
                         & C.Class.CIdNavigation.Number == num
                         select new { AcId = C.AcId };
 
-            //check if assignments already there
+            //check if category exist
             if (query.Count() > 0) {
                 Assignment a = new Assignment
                 {
