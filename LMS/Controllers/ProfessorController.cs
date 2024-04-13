@@ -263,7 +263,7 @@ namespace LMS_CustomIdentity.Controllers
                               (AC.Class.CIdNavigation.Subject == subject && AC.Class.CIdNavigation.Number == num) && AC.Name == category && AC.Weight == catweight
                         select AC.ClassId;
 
-            if (query.Count() > 0 || query != null)
+            if (query.Count() > 0)
             {
                 return Json(new { success = false });
 
@@ -289,7 +289,7 @@ namespace LMS_CustomIdentity.Controllers
 
                     Name = category,
                     Weight = (byte)catweight,
-                    ClassId = query.SingleOrDefault()
+                    ClassId = classIdQuery.SingleOrDefault()
                 };
                 db.AssignmentCategories.Add(ac);
                 db.SaveChanges();
@@ -332,7 +332,7 @@ namespace LMS_CustomIdentity.Controllers
                         select new { AcId = C.AcId };
 
             //check if assignments already there
-            if (query.Count() == 0) {
+            if (query.Count() > 0) {
                 Assignment a = new Assignment
                 {
                     Name = asgname,

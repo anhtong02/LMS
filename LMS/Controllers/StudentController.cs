@@ -232,18 +232,24 @@ namespace LMS.Controllers
             var query = from e in db.Classes
                         where e.CIdNavigation.Subject == subject && e.CIdNavigation.Number == num && e.SemSeason == season && e.SemYear == year
                         select new { e.ClassId };
-            var query1 = from q in query
-                         join en in db.Enrolleds on new { A = q.ClassId, B = uid } equals new { A = en.ClassId, B = en.UId } into q1
-                         select q1;
-            if (query1.Count() == 0) 
+            
+            if (query.Count() > 0) 
             {
-                
-                Enrolled enroll = new Enrolled();
-                enroll.UId = uid;
-                enroll.ClassId = query.SingleOrDefault().ClassId;
-                db.Enrolleds.Add(enroll);
-                db.SaveChanges();
-
+                try
+                {
+                    Enrolled enroll = new Enrolled();
+                    enroll.UId = uid;
+                    enroll.ClassId = query.SingleOrDefault().ClassId;
+                    enroll.Grade = "";
+                    db.Enrolleds.Add(enroll);
+                    db.SaveChanges();
+                    return Json(new { success = true});
+                    
+                }
+                catch
+                {
+                    System.Diagnostics.Debug.WriteLine("Unable to enroll");
+                }
             }
             return Json(new { success = false});
         }
