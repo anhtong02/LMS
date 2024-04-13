@@ -419,7 +419,11 @@ namespace LMS_CustomIdentity.Controllers
                               s.AIdNavigation.Ac.Class.CIdNavigation.Number == num
                         select s;
 
-                q.FirstOrDefault().Score = (uint)score;
+                Submission x = q.SingleOrDefault();
+                if (x != null)
+                    x.Score = (uint)score;
+
+                db.SaveChanges();
                 return Json(new { success = true });
             }
             catch
