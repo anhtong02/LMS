@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using LMS.Models.LMSModels;
+using LMS_CustomIdentity.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Query.Internal;
@@ -240,7 +241,7 @@ namespace LMS.Controllers
                     Enrolled enroll = new Enrolled();
                     enroll.UId = uid;
                     enroll.ClassId = query.SingleOrDefault().ClassId;
-                    enroll.Grade = "";
+                    enroll.Grade = "--";
                     db.Enrolleds.Add(enroll);
                     db.SaveChanges();
                     return Json(new { success = true});
@@ -269,7 +270,6 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing a single field called "gpa" with the number value</returns>
         public IActionResult GetGPA(string uid)
         {
-            
             return Json(null);
         }
                 
