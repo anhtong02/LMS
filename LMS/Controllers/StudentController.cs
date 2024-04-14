@@ -269,7 +269,71 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing a single field called "gpa" with the number value</returns>
         public IActionResult GetGPA(string uid)
         {
-            
+            var query = from e in db.Enrolleds
+                        where e.UId == uid
+                        select e;
+            double gpa = 0;
+            if (query.Count() == 0)
+            {
+                return Json(new { gpa = 0 });
+            }
+            else
+            {
+                foreach (var e in query)
+                {
+                    if (e.Grade.Equals("--"))
+                    {
+                        gpa += 0;
+                    }
+                    else
+                    {
+                        switch (e.Grade)
+                        {
+                            case "A":
+                                gpa += 4;
+                                break;
+                            case "A-":
+                                gpa += 3.7;
+                                break;
+                            case "B+":
+                                gpa += 3.3;
+                                break;
+                            case "B":
+                                gpa += 3.0;
+                                break;
+                            case "B-":
+                                gpa += 2.7;
+                                break;
+                            case "C+":
+                                gpa += 2.3;
+                                break;
+                            case "C":
+                                gpa += 2.0;
+                                break;
+                            case "C-":
+                                gpa += 1.7;
+                                break;
+                            case "D+":
+                                gpa += 1.3;
+                                break;
+                            case "D":
+                                gpa += 1.0;
+                                break;
+                            case "D-":
+                                gpa += 0.7;
+                                break;
+                            case "E":
+                                gpa += 0.0;
+                                break;
+
+
+
+
+                        }
+                    }
+
+                }
+            }
             return Json(null);
         }
                 
