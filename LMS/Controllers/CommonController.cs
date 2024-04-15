@@ -150,7 +150,6 @@ namespace LMS.Controllers
                          join s in db.Submissions on new { a = q.AId, b = uid } equals new { a = s.AId, b = s.UId } into qs
                          from j2 in qs
                          select new { j2.Contents };
-            System.Diagnostics.Debug.WriteLine("query2 : ", Json(query2.ToArray()));
 
             try
             {

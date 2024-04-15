@@ -122,23 +122,7 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetStudentsInClass(string subject, int num, string season, int year)
         {
-            /* var query = from C in db.Classes
-                         where (C.SemSeason == season && C.SemYear == year) &&
-                               (C.CIdNavigation.Subject == subject && C.CIdNavigation.Number == num)
-                         select C.ClassId;
-
-             var query2 = from E in db.Enrolleds
-                          where query.Contains(E.ClassId)
-                          select new { fname = E.UIdNavigation.FName,
-                                       lname = E.UIdNavigation.LName,
-                                         uid = E.UIdNavigation.UId,
-                                         dob = E.UIdNavigation.Dob,
-                                       grade = E.Grade,
-                          };*/
-
-
-
-
+         
 
             var q = from C in db.Classes
                     join E in db.Enrolleds on C.ClassId equals E.ClassId
@@ -349,6 +333,7 @@ namespace LMS_CustomIdentity.Controllers
                 {
                     var x = query.FirstOrDefault();
                     CalculateGrade(x.ClassId);
+
                 }
                 catch 
                 {
@@ -441,7 +426,7 @@ namespace LMS_CustomIdentity.Controllers
                 try
                 {
                     
-                    CalculateGrade(extracted.ClassId);
+                    CalculateGrade(extracted.ClassId, uid);
                 }
                 catch
                 {
@@ -498,24 +483,17 @@ namespace LMS_CustomIdentity.Controllers
         /// <param name="asgname"></param>
         /// <param name="uid"></param>
         /// <returns></returns>
-        public string CalculateGrade (uint ClassID, string uid = null)
+        public IActionResult CalculateGrade (uint ClassID, string uid = null)
         {
-            string result = "";
-            
-            if (uid is not null)
-            {
-                
-            }
-           
+
             //get the categories from the class specified in parameters and all students:
             var query = from C in db.Classes
-                    where C.ClassId == ClassID
-                    select new
-                    {
-                        categories = C.AssignmentCategories,
-                        enrolls = C.Enrolleds.Where(e => e.ClassId == ClassID)
-                    };
-
+                        where C.ClassId == ClassID
+                        select new
+                        {
+                            enroll = C.Enrolleds,
+                            categories = C.AssignmentCategories
+                        };
 
             if (uid is not null)
             {
@@ -524,58 +502,54 @@ namespace LMS_CustomIdentity.Controllers
                                    select new { 
                                        
                                        enroll = e,
-                                       categories = e.Class.AssignmentCategories };
+                                       categories = e.Class.AssignmentCategories 
 
-
+                                   };
 
                 uint totalScore = 0;
                 byte totalWeight = 0;
-                foreach (var category in queryStudent.SelectMany(x => x.categories))
+                foreach (var category in queryStudent.FirstOrDefault().categories)
                 {
-                    totalWeight += category.Weight;
+                    if (category.Assignments.Count() == 0)
+                        continue;
 
+                    totalWeight += category.Weight;
                     uint score = PointsEarnedOverMaxPoints(category, uid);
                     totalScore += score;
 
 
                 }
-
+               
                 int scalingFactor = 100 / totalWeight;
                 int totalPercentage = (int)totalScore * scalingFactor;
                 string letterGrade = PercentageToLetterGrade(totalPercentage);
 
-                var x = queryStudent.FirstOrDefault();
+
                 //update letter grade in the database
-                x.enroll.Grade = letterGrade;
+                queryStudent.FirstOrDefault().enroll.Grade = letterGrade;
                 db.SaveChanges();
-
-
             }
 
-
-
-
-
-
-            //for each student calculate the grade
-            foreach (var enroll in query.SelectMany(x => x.enrolls))
+            //for each student calculate the grade          
+            foreach (var enroll in query.FirstOrDefault().enroll)
             {
-
-                
 
                 uint totalScore = 0;
                 byte totalWeight = 0;
-                foreach (var category in query.SelectMany(x => x.categories))
+                foreach (var category in query.FirstOrDefault().categories)
                 {
+                    if (category.Assignments.Count() == 0)
+                        continue;
+                        
                     totalWeight += category.Weight;
-
                     uint score = PointsEarnedOverMaxPoints(category, enroll.UId);
                     totalScore += score;
                     
 
                 }
-
                 int scalingFactor = 100 / totalWeight;
+
+
                 int totalPercentage = (int)totalScore * scalingFactor;
                 string letterGrade = PercentageToLetterGrade(totalPercentage);
 
@@ -585,11 +559,8 @@ namespace LMS_CustomIdentity.Controllers
                 db.SaveChanges();
 
             }
+            return Json(new { success = true });
 
-
-          
-
-            return result;
         }
         /// <summary>
         /// Calculate points earned over total max point in a category, then multiply by cat weight.

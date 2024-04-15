@@ -291,12 +291,11 @@ namespace LMS.Controllers
                                 where e.UId == uid && e.Grade != "--"
                                 select e.Grade;
 
-            int numOfClases = 0;
+            int numOfClases = studentGrades.Count();
             double totalGradePoints = 0.0;
 
             foreach (var grade in studentGrades)
             {
-                numOfClases++;
 
 
                 if (gradeMAP.ContainsKey(grade))
@@ -310,7 +309,7 @@ namespace LMS.Controllers
 
             double gpa = numOfClases == 0 ? 0.0 : Double.Round(totalGradePoints / numOfClases, 2) ;   
 
-            return Json(gpa);
+            return Json(new { gpa = gpa });
         }
                 
         /*******End code to modify********/
