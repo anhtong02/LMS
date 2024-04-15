@@ -80,8 +80,7 @@ namespace LMS.Controllers
         {
             var query = from cl in db.Classes
                         join en in db.Enrolleds on cl.ClassId equals en.ClassId into e
-                        from j1 in e.DefaultIfEmpty()
-                        where j1.UId == uid
+                        from j1 in e where j1.UId == uid
 
                         select new
                         {
@@ -274,6 +273,7 @@ namespace LMS.Controllers
                         where e.UId == uid
                         select e;
             double gpa = 0;
+            var numCourse = query.Count();
             if (query.Count() == 0)
             {
                 return Json(new { gpa = 0 });
@@ -285,6 +285,7 @@ namespace LMS.Controllers
                     if (e.Grade.Equals("--"))
                     {
                         gpa += 0;
+                        numCourse -= 1;
                     }
                     else
                     {
@@ -329,11 +330,10 @@ namespace LMS.Controllers
 
                         }
                     }
-
                 }
             }
-
-            return Json(null);
+            double totalgpa = gpa / numCourse;
+            return Json(new { gpa = totalgpa});
         }
                 
         /*******End code to modify********/
