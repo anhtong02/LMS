@@ -10,6 +10,7 @@ using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using static System.Formats.Asn1.AsnWriter;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -329,7 +330,7 @@ namespace LMS_CustomIdentity.Controllers
                         &
                         C.Class.CIdNavigation.Subject == subject
                         & C.Class.CIdNavigation.Number == num
-                        select new { AcId = C.AcId };
+                        select new { AcId = C.AcId , ClassId = C.ClassId };
 
             //check if category exist
             if (query.Count() > 0) {
@@ -343,6 +344,17 @@ namespace LMS_CustomIdentity.Controllers
                 };
                 db.Assignments.Add(a);
                 db.SaveChanges();
+
+                try
+                {
+                    var x = query.FirstOrDefault();
+                    CalculateGrade(x.ClassId);
+                }
+                catch 
+                {
+                    System.Diagnostics.Debug.WriteLine("Fail to calculate grade from CreateAssignment()");
+                }
+
                 return Json(new { success = true });
             }
             else
@@ -409,7 +421,7 @@ namespace LMS_CustomIdentity.Controllers
         {
             try
             {
-                var q = from s in db.Submissions
+                var query = from s in db.Submissions
                         where s.UId == uid &
                               s.AIdNavigation.Name == asgname &
                               s.AIdNavigation.Ac.Name == category &
@@ -417,14 +429,27 @@ namespace LMS_CustomIdentity.Controllers
                               s.AIdNavigation.Ac.Class.SemSeason == season &
                               s.AIdNavigation.Ac.Class.CIdNavigation.Subject == subject &
                               s.AIdNavigation.Ac.Class.CIdNavigation.Number == num
-                        select s;
+                        select new { Submission = s, ClassId = s.AIdNavigation.Ac.ClassId };
 
-                Submission x = q.SingleOrDefault();
-                if (x != null)
-                    x.Score = (uint)score;
+                var extracted = query.SingleOrDefault();
+                if (extracted != null)
+                    extracted.Submission.Score = (uint)score;
 
                 db.SaveChanges();
+
+
+                try
+                {
+                    
+                    CalculateGrade(extracted.ClassId);
+                }
+                catch
+                {
+                    System.Diagnostics.Debug.WriteLine("Fail to calculate grade from GradeSubmission()");
+                }
+
                 return Json(new { success = true });
+
             }
             catch
             {
@@ -461,9 +486,166 @@ namespace LMS_CustomIdentity.Controllers
 
             return Json(query.ToArray());
         }
+        /// <summary>
+        /// Calculate GPA Letter Grade for either 1 student or all students in the specified class.
+        /// No submission : 0 points
+        /// </summary>
+        /// <param name="subject"></param>
+        /// <param name="num"></param>
+        /// <param name="season"></param>
+        /// <param name="year"></param>
+        /// <param name="category"></param>
+        /// <param name="asgname"></param>
+        /// <param name="uid"></param>
+        /// <returns></returns>
+        public string CalculateGrade (uint ClassID, string uid = null)
+        {
+            string result = "";
+            
+            if (uid is not null)
+            {
+                
+            }
+           
+            //get the categories from the class specified in parameters and all students:
+            var query = from C in db.Classes
+                    where C.ClassId == ClassID
+                    select new
+                    {
+                        categories = C.AssignmentCategories,
+                        enrolls = C.Enrolleds.Where(e => e.ClassId == ClassID)
+                    };
 
 
-        
+            if (uid is not null)
+            {
+                var queryStudent = from e in db.Enrolleds
+                                   where e.ClassId == ClassID && e.UId == uid
+                                   select new { 
+                                       
+                                       enroll = e,
+                                       categories = e.Class.AssignmentCategories };
+
+
+
+                uint totalScore = 0;
+                byte totalWeight = 0;
+                foreach (var category in queryStudent.SelectMany(x => x.categories))
+                {
+                    totalWeight += category.Weight;
+
+                    uint score = PointsEarnedOverMaxPoints(category, uid);
+                    totalScore += score;
+
+
+                }
+
+                int scalingFactor = 100 / totalWeight;
+                int totalPercentage = (int)totalScore * scalingFactor;
+                string letterGrade = PercentageToLetterGrade(totalPercentage);
+
+                var x = queryStudent.FirstOrDefault();
+                //update letter grade in the database
+                x.enroll.Grade = letterGrade;
+                db.SaveChanges();
+
+
+            }
+
+
+
+
+
+
+            //for each student calculate the grade
+            foreach (var enroll in query.SelectMany(x => x.enrolls))
+            {
+
+                
+
+                uint totalScore = 0;
+                byte totalWeight = 0;
+                foreach (var category in query.SelectMany(x => x.categories))
+                {
+                    totalWeight += category.Weight;
+
+                    uint score = PointsEarnedOverMaxPoints(category, enroll.UId);
+                    totalScore += score;
+                    
+
+                }
+
+                int scalingFactor = 100 / totalWeight;
+                int totalPercentage = (int)totalScore * scalingFactor;
+                string letterGrade = PercentageToLetterGrade(totalPercentage);
+
+
+                //update letter grade in the database
+                enroll.Grade = letterGrade;
+                db.SaveChanges();
+
+            }
+
+
+          
+
+            return result;
+        }
+        /// <summary>
+        /// Calculate points earned over total max point in a category, then multiply by cat weight.
+        /// </summary>
+        /// <param name="category"></param>
+        /// <param name="uid"></param>
+        /// <returns></returns>
+        private uint PointsEarnedOverMaxPoints(AssignmentCategory category, string uid )
+        {
+           
+            var queryMaxPoints = (from AC in db.AssignmentCategories
+                                  where AC == category
+                                  from assignment in AC.Assignments
+                                  select (int)assignment.Points).Sum();
+
+            var queryPointsEarned = (from AC in db.AssignmentCategories
+                                  where AC == category
+                                  from assignment in AC.Assignments
+                                  from submission in assignment.Submissions
+                                  where submission.UId == uid
+                                  select (int)submission.Score).Sum();
+
+            
+            return (uint)((queryPointsEarned / queryMaxPoints) * category.Weight);
+        }
+
+        private string PercentageToLetterGrade(int percentage)
+        {
+            switch (percentage)
+            {
+                case var p when p >= 93 && p <=100:
+                    return "A";
+                case var p when p >= 90:
+                    return "A-";
+                case var p when p >= 87:
+                    return "B+";
+                case var p when p >= 83:
+                    return "B";
+                case var p when p >= 80:
+                    return "B-";
+                case var p when p >= 77:
+                    return "C+";
+                case var p when p >= 73:
+                    return "C";
+                case var p when p >= 70:
+                    return "C-";
+                case var p when p >= 67:
+                    return "D+";
+                case var p when p >= 63:
+                    return "D";
+                case var p when p >= 60:
+                    return "D-";
+                default:
+                    return "E";
+            }
+        }
         /*******End code to modify********/
     }
 }
