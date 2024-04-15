@@ -510,12 +510,20 @@ namespace LMS_CustomIdentity.Controllers
                 byte totalWeight = 0;
                 foreach (var category in queryStudent.FirstOrDefault().categories)
                 {
-                    if (category.Assignments.Count() == 0)
-                        continue;
+                    var queryCat = from c in db.AssignmentCategories
+                                   where c.AcId == category.AcId && c.Name == category.Name
+                                   select c.Assignments;
 
-                    totalWeight += category.Weight;
+
+                    var x = queryCat.SingleOrDefault();
+                    foreach (var y in x)
+                    {
+
+                    }
+                   /* if (queryCat.Count() > 0)
+                        totalWeight += category.Weight;
                     uint score = PointsEarnedOverMaxPoints(category, uid);
-                    totalScore += score;
+                    totalScore += score;*/
 
 
                 }
@@ -528,6 +536,7 @@ namespace LMS_CustomIdentity.Controllers
                 //update letter grade in the database
                 queryStudent.FirstOrDefault().enroll.Grade = letterGrade;
                 db.SaveChanges();
+                return Json(new { success = true });
             }
 
             //for each student calculate the grade          
