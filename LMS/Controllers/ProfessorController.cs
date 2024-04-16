@@ -518,18 +518,19 @@ namespace LMS_CustomIdentity.Controllers
                     var x = queryCat.SingleOrDefault();
                     foreach (var y in x)
                     {
-
+                        uint score = PointsEarnedOverMaxPoints(category, uid);
+                        totalScore += score;
                     }
-                   /* if (queryCat.Count() > 0)
-                        totalWeight += category.Weight;
-                    uint score = PointsEarnedOverMaxPoints(category, uid);
-                    totalScore += score;*/
-
+                    /* if (queryCat.Count() > 0)
+                         totalWeight += category.Weight;
+                     uint score = PointsEarnedOverMaxPoints(category, uid);
+                     totalScore += score;*/
+                    totalWeight += category.Weight;
 
                 }
                
                 int scalingFactor = 100 / totalWeight;
-                int totalPercentage = (int)totalScore * scalingFactor;
+                double totalPercentage = Double.Round((int)totalScore * scalingFactor, 2);
                 string letterGrade = PercentageToLetterGrade(totalPercentage);
 
 
@@ -559,7 +560,7 @@ namespace LMS_CustomIdentity.Controllers
                 int scalingFactor = 100 / totalWeight;
 
 
-                int totalPercentage = (int)totalScore * scalingFactor;
+                double totalPercentage = Double.Round((int)totalScore * scalingFactor, 2);
                 string letterGrade = PercentageToLetterGrade(totalPercentage);
 
 
@@ -596,31 +597,31 @@ namespace LMS_CustomIdentity.Controllers
             return (uint)((queryPointsEarned / queryMaxPoints) * category.Weight);
         }
 
-        private string PercentageToLetterGrade(int percentage)
+        private string PercentageToLetterGrade(double percentage)
         {
             switch (percentage)
             {
                 case var p when p >= 93 && p <=100:
                     return "A";
-                case var p when p >= 90:
+                case var p when p >= 90 && p < 93:
                     return "A-";
-                case var p when p >= 87:
+                case var p when p >= 87 && p < 90:
                     return "B+";
-                case var p when p >= 83:
+                case var p when p >= 83 && p < 87:
                     return "B";
-                case var p when p >= 80:
+                case var p when p >= 80 && p < 83:
                     return "B-";
-                case var p when p >= 77:
+                case var p when p >= 77 && p < 80:
                     return "C+";
-                case var p when p >= 73:
+                case var p when p >= 73 && p < 77:
                     return "C";
-                case var p when p >= 70:
+                case var p when p >= 70 && p < 73: 
                     return "C-";
-                case var p when p >= 67:
+                case var p when p >= 67 && p < 70:
                     return "D+";
-                case var p when p >= 63:
+                case var p when p >= 63 && p < 67:
                     return "D";
-                case var p when p >= 60:
+                case var p when p >= 60 && p < 63:
                     return "D-";
                 default:
                     return "E";
