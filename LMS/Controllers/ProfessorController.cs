@@ -314,10 +314,20 @@ namespace LMS_CustomIdentity.Controllers
                         &
                         C.Class.CIdNavigation.Subject == subject
                         & C.Class.CIdNavigation.Number == num
-                        select new { AcId = C.AcId , ClassId = C.ClassId };
+                        select new { AcId = C.AcId , ClassId = C.ClassId ,assignments = C.Assignments };
 
             //check if category exist
             if (query.Count() > 0) {
+                
+                var y = query.FirstOrDefault();
+
+                foreach (var asg in y.assignments)
+                {
+                    if( asg.Name.Contains(asgname))
+                        return Json(new { success = false });
+
+
+                }
                 Assignment a = new Assignment
                 {
                     Name = asgname,
