@@ -507,7 +507,7 @@ namespace LMS_CustomIdentity.Controllers
                                    };
 
                 double totalScore = 0;
-                byte totalWeight = 0;
+                double totalWeight = 0;
                 foreach (var category in queryStudent.FirstOrDefault().categories)
                 {
                     var queryCat = from c in db.AssignmentCategories
@@ -521,12 +521,12 @@ namespace LMS_CustomIdentity.Controllers
                         double score = PointsEarnedOverMaxPoints(category, uid);
                         totalScore += score;
                     }
-                    
-                    totalWeight += category.Weight;
+                    if (x.Count > 0)
+                        totalWeight += category.Weight;
 
                 }
-               
-                double scalingFactor = 100 / totalWeight;
+
+                double scalingFactor = 100.0 / totalWeight;
                 double totalPercentage = Double.Round((int)totalScore * scalingFactor, 2);
                 string letterGrade = PercentageToLetterGrade(totalPercentage);
 
@@ -556,11 +556,9 @@ namespace LMS_CustomIdentity.Controllers
                         totalScore += score;
                     }
 
-
-                    totalWeight += category.Weight;
-                   
+                    if (x.Count > 0)
+                        totalWeight += category.Weight;                   
                     
-
                 }
                 double scalingFactor = 100 / totalWeight;
                 double totalPercentage = Double.Round((int)totalScore * scalingFactor, 2);
